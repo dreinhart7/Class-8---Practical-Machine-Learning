@@ -1,0 +1,202 @@
+RESULTS USING 3 DIFFERENT METHODOLOGIES (RPART, SVM, AND RANDOM FOREST) TO PREDICT THE "CLASSE" - OR HOW WELL THE PARTICIPANTS PERFORMED
+THE WEIGHT LIFTING ACTIVITY (THERE WERE 5 CLASSES: A- CORRECT; B- THROWING ELBOWS TO THE FRONT; C- LIFTING 1/2 WAY UP; D- LOWERING 1/2 WAY DOWN;
+E- THROWING HIPS TO THE FRONT)
+
+
+RPART
+confusionMatrix(pred_rpart,testing$classe)
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1350   39    3    1    0
+         B   34  792   54   44    0
+         C   11  116  774  115   33
+         D    0    2   10  516   38
+         E    0    0   14  128  830
+
+Overall Statistics
+                                          
+               Accuracy : 0.8691          
+                 95% CI : (0.8593, 0.8784)
+    No Information Rate : 0.2845          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.8343          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            0.9677   0.8346   0.9053   0.6418   0.9212
+Specificity            0.9877   0.9666   0.9321   0.9878   0.9645
+Pos Pred Value         0.9691   0.8571   0.7378   0.9117   0.8539
+Neg Pred Value         0.9872   0.9606   0.9790   0.9336   0.9819
+Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+Detection Rate         0.2753   0.1615   0.1578   0.1052   0.1692
+Detection Prevalence   0.2841   0.1884   0.2139   0.1154   0.1982
+Balanced Accuracy      0.9777   0.9006   0.9187   0.8148   0.9429
+
+SVM
+confusionMatrix(pred_svm,testing$classe)
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1387   83    0    0    0
+         B    3  850   32    0    0
+         C    5   16  815   53    0
+         D    0    0    8  749   30
+         E    0    0    0    2  871
+
+Overall Statistics
+                                          
+               Accuracy : 0.9527          
+                 95% CI : (0.9464, 0.9585)
+    No Information Rate : 0.2845          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.9401          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            0.9943   0.8957   0.9532   0.9316   0.9667
+Specificity            0.9763   0.9912   0.9817   0.9907   0.9995
+Pos Pred Value         0.9435   0.9605   0.9168   0.9517   0.9977
+Neg Pred Value         0.9977   0.9754   0.9900   0.9866   0.9926
+Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+Detection Rate         0.2828   0.1733   0.1662   0.1527   0.1776
+Detection Prevalence   0.2998   0.1805   0.1813   0.1605   0.1780
+Balanced Accuracy      0.9853   0.9434   0.9675   0.9612   0.9831
+
+RANDOM FOREST
+confusionMatrix(pred_rf,testing$classe)
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1395    2    0    0    0
+         B    0  947    0    0    0
+         C    0    0  853    0    0
+         D    0    0    2  802    0
+         E    0    0    0    2  901
+
+Overall Statistics
+                                          
+               Accuracy : 0.9988          
+                 95% CI : (0.9973, 0.9996)
+    No Information Rate : 0.2845          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.9985          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            1.0000   0.9979   0.9977   0.9975   1.0000
+Specificity            0.9994   1.0000   1.0000   0.9995   0.9995
+Pos Pred Value         0.9986   1.0000   1.0000   0.9975   0.9978
+Neg Pred Value         1.0000   0.9995   0.9995   0.9995   1.0000
+Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+Detection Rate         0.2845   0.1931   0.1739   0.1635   0.1837
+Detection Prevalence   0.2849   0.1931   0.1739   0.1639   0.1841
+Balanced Accuracy      0.9997   0.9989   0.9988   0.9985   0.9998
+
+
+#reading in the training and test data provided for the assignment
+dat_train=read.csv("/Users/reinhad/Documents/Data Scientist/Classes/Class 8 - Practical Machine Learning/Week 4/pml-training.csv", na.strings=c("NA", "#DIV/0!",""))
+dat_test=read.csv("/Users/reinhad/Documents/Data Scientist/Classes/Class 8 - Practical Machine Learning/Week 4/pml-testing.csv", na.strings=c("NA", "#DIV/0!",""))
+#loading possible libraries needed to predict class
+library(forecast)
+library(e1071)
+library(caret)
+library(gbm)
+library(AppliedPredictiveModeling)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+#Partitioning the training data into a training and testing set to see how well the predictions work
+inTrain=createDataPartition(dat_train$classe,p=3/4)[[1]]
+training=dat_train[inTrain,]
+testing=dat_train[-inTrain,]
+#Determining the Near Zero and Zero Variance variables and removing them from the training set
+NZV <-nearZeroVar(training,saveMetrics=TRUE)
+NZV[NZV[,"zeroVar"] + NZV[,"nzv"] > 0, ]
+NZVvars <- names(training) %in% c("new_window", "kurtosis_yaw_belt", "skewness_yaw_belt", "amplitude_yaw_belt",       
+                                  "avg_roll_arm", "stddev_roll_arm","var_roll_arm","avg_pitch_arm","stddev_pitch_arm",
+                                  "var_pitch_arm","avg_yaw_arm","stddev_yaw_arm","var_yaw_arm","max_roll_arm",
+                                  "amplitude_roll_arm","amplitude_pitch_arm","kurtosis_yaw_dumbbell","skewness_yaw_dumbbell",
+                                  "amplitude_yaw_dumbbell","kurtosis_yaw_forearm","skewness_yaw_forearm","max_roll_forearm",
+                                  "min_roll_forearm","amplitude_yaw_forearm","avg_roll_forearm","stddev_roll_forearm",
+                                  "var_roll_forearm","avg_pitch_forearm","stddev_pitch_forearm","var_pitch_forearm",
+                                  "avg_yaw_forearm","stddev_yaw_forearm","var_yaw_forearm")
+training <-training[!NZVvars]
+dim(training)
+#Removing the 1st column of the training set, which is the id column
+training <-training[c(-1)]
+#Removing Variables that have 70% or more NAs
+training_remNAs <-training
+  for (i in 1:length(training)) {                                                  #For every column in the training set 
+     if(sum(is.na(training[, i])) / nrow(training) >=.7) {                         # if more than 70% of the row is NA's
+        for(j in 1:length(training_remNAs)){
+          if(length(grep(names(training[i]), names(training_remNAs)[j]))==1) {     #if the columns are the same
+            training_remNAs <- training_remNAs[ , -j]                              #Remove that column
+          }
+        }
+     }
+   } 
+dim(training_remNAs)
+#took 126 columns down to 58
+#Raname back to training now that we have a clean set of data
+training <- training_remNAs
+rm(training_remNAs)
+#clean the test data
+clean_test <- colnames(training)                                                    #assigns clean_test the updated column names w/out NAs
+clean2_test <- colnames(training[,-58])                                             #Removes the 58th column from the training, which is the classe   
+testing <-testing[clean_test]                                                       #assigns the testing partition the same columns as the "clean" training data
+dat_test <-dat_test[clean2_test]                                                    #assigns the test set the same columns as the "clean" training data
+dim(testing)
+dim(dat_test)
+
+#Coercing the data to be of the same type
+for(i in 1:length(dat_test)) {
+  for(j in 1:length(training))  {
+    if(length(grep(names(training[i]), names(dat_test)[j])) ==1)  {
+      class(dat_test[j]) <-class(training[i])
+    }
+  }
+}
+dat_test<-rbind(training[2,-58] , dat_test)
+dat_test <-dat_test[-1, ]
+#using rpart method 
+rpart_mod <-rpart(classe ~., data=training, method="class")
+fancyRpartPlot(rpart_mod)
+#seeing how accurate the rpart method is:
+pred_rpart <- predict(rpart_mod,testing, type="class")
+confusionMatrix(pred_rpart,testing$classe)
+
+#using SVM method
+svmmod <-svm(classe ~., data=training)
+pred_svm <- predict(svmmod,testing, type="class")
+confusionMatrix(pred_svm,testing$classe)
+accuracy(predsvm, testing$classe)
+
+#using Random Forest Method
+rf_mod <- randomForest(classe ~., data=training)
+pred_rf <- predict(rf_mod,testing,type="class")
+confusionMatrix(pred_rf,testing$classe)
+
+#Since RF was the best accuracy, using that on the test set
+pred_rftest <- predict(rf_mod,dat_test,type="class")
+#exporting the predictions to a file for the assignment
+testresults=function(x)   {
+  n=length(x)
+  for(i in 1:n)  {
+    filename=paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE, col.names=TRUE)
+    }
+  }
+testresults(pred_rftest)
