@@ -1,0 +1,103 @@
+#This is my R Markdown for Predicting "how well" a Weight Lifting Activity was Performed
+
+#Reading in the training and test data provided for the assignment
+dat_train=read.csv("/Users/reinhad/Documents/Data Scientist/Classes/Class 8 - Practical Machine Learning/Week 4/pml-training.csv", na.strings=c("NA", "#DIV/0!",""))
+dat_test=read.csv("/Users/reinhad/Documents/Data Scientist/Classes/Class 8 - Practical Machine Learning/Week 4/pml-testing.csv", na.strings=c("NA", "#DIV/0!",""))
+
+#loading possible libraries needed to predict class
+library(forecast)
+library(e1071)
+library(caret)
+library(gbm)
+library(AppliedPredictiveModeling)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+
+#Partitioning the training data into a training and testing set to see how well the predictions work
+inTrain=createDataPartition(dat_train$classe,p=3/4)[[1]]
+training=dat_train[inTrain,]
+testing=dat_train[-inTrain,]
+
+#Determining the Near Zero and Zero Variance variables and removing them from the training set
+NZV <-nearZeroVar(training,saveMetrics=TRUE)
+NZV[NZV[,"zeroVar"] + NZV[,"nzv"] > 0, ]
+NZVvars <- names(training) %in% c("new_window", "kurtosis_yaw_belt", "skewness_yaw_belt", "amplitude_yaw_belt",       
+                                  "avg_roll_arm", "stddev_roll_arm","var_roll_arm","avg_pitch_arm","stddev_pitch_arm",
+                                  "var_pitch_arm","avg_yaw_arm","stddev_yaw_arm","var_yaw_arm","max_roll_arm",
+                                  "amplitude_roll_arm","amplitude_pitch_arm","kurtosis_yaw_dumbbell","skewness_yaw_dumbbell",
+                                  "amplitude_yaw_dumbbell","kurtosis_yaw_forearm","skewness_yaw_forearm","max_roll_forearm",
+                                  "min_roll_forearm","amplitude_yaw_forearm","avg_roll_forearm","stddev_roll_forearm",
+                                  "var_roll_forearm","avg_pitch_forearm","stddev_pitch_forearm","var_pitch_forearm",
+                                  "avg_yaw_forearm","stddev_yaw_forearm","var_yaw_forearm")
+training <-training[!NZVvars]
+dim(training)
+
+#Removing the 1st column of the training set, which is the id column
+training <-training[c(-1)]
+
+#Removing Variables that have 70% or more NAs
+training_remNAs <-training
+  for (i in 1:length(training)) {                                                  #For every column in the training set 
+     if(sum(is.na(training[, i])) / nrow(training) >=.7) {                         # if more than 70% of the row is NA's
+        for(j in 1:length(training_remNAs)){
+          if(length(grep(names(training[i]), names(training_remNAs)[j]))==1) {     #if the columns are the same
+            training_remNAs <- training_remNAs[ , -j]                              #Remove that column
+          }
+        }
+     }
+   } 
+dim(training_remNAs)
+
+#took 126 columns down to 58
+#Rename back to training now that we have a clean set of data
+training <- training_remNAs
+rm(training_remNAs)
+#clean the test data
+clean_test <- colnames(training)                                                    #assigns clean_test the updated column names w/out NAs
+clean2_test <- colnames(training[,-58])                                             #Removes the 58th column from the training, which is the classe   
+testing <-testing[clean_test]                                                       #assigns the testing partition the same columns as the "clean" training data
+dat_test <-dat_test[clean2_test]                                                    #assigns the test set the same columns as the "clean" training data
+dim(testing)
+dim(dat_test)
+
+#Coercing the data to be of the same type
+for(i in 1:length(dat_test)) {
+  for(j in 1:length(training))  {
+    if(length(grep(names(training[i]), names(dat_test)[j])) ==1)  {
+      class(dat_test[j]) <-class(training[i])
+    }
+  }
+}
+dat_test<-rbind(training[2,-58] , dat_test)
+dat_test <-dat_test[-1, ]
+
+#using rpart method 
+rpart_mod <-rpart(classe ~., data=training, method="class")
+fancyRpartPlot(rpart_mod)
+#seeing how accurate the rpart method is:
+pred_rpart <- predict(rpart_mod,testing, type="class")
+confusionMatrix(pred_rpart,testing$classe)
+
+#using SVM method
+svmmod <-svm(classe ~., data=training)
+pred_svm <- predict(svmmod,testing, type="class")
+confusionMatrix(pred_svm,testing$classe)
+
+#using Random Forest Method
+rf_mod <- randomForest(classe ~., data=training)
+pred_rf <- predict(rf_mod,testing,type="class")
+confusionMatrix(pred_rf,testing$classe)
+
+#Since RF was the best accuracy, using that on the test set
+pred_rftest <- predict(rf_mod,dat_test,type="class")
+#exporting the predictions to a file for the assignment
+testresults=function(x)   {
+  n=length(x)
+  for(i in 1:n)  {
+    filename=paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE, col.names=TRUE)
+    }
+  }
+testresults(pred_rftest)
+
